@@ -11,8 +11,9 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import com.example.laundrysystem.LaundryOwners.*;
+
 import com.example.laundrysystem.Admin.admin;
+import com.example.laundrysystem.LaundryOwners.laundryowner_upload_images_screen;
 import com.example.laundrysystem.R;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -27,7 +28,6 @@ public class user extends AppCompatActivity {
 
     public Button btn_user;
     public Button btn_admin;
-//    public Button btn_login;
     public Button btn_signUp;
 
     EditText loginUsername, loginPassword;
@@ -35,16 +35,15 @@ public class user extends AppCompatActivity {
 
     private Spinner SpinnerText;
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.user);
 
-        btn_user = (Button)findViewById(R.id.btn_user);
-        btn_admin = (Button) findViewById(R.id.btn_admin);
-        btn_login = (Button)findViewById(R.id.btn_login);
-        btn_signUp = (Button) findViewById(R.id.btn_sign_up);
+        btn_user = findViewById(R.id.btn_user);
+        btn_admin = findViewById(R.id.btn_admin);
+        btn_login = findViewById(R.id.btn_login);
+        btn_signUp = findViewById(R.id.btn_sign_up);
 
         SpinnerText = findViewById(R.id.SpinnerText);
 
@@ -60,7 +59,6 @@ public class user extends AppCompatActivity {
             }
         });
 
-
         btn_admin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -70,32 +68,25 @@ public class user extends AppCompatActivity {
         });
 
         String[] textSizes = getResources().getStringArray(R.array.List_Option);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, textSizes);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, textSizes);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         SpinnerText.setAdapter(adapter);
 
         btn_login.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                if (!validateUsername() | !validatePassword()) {
+                    // Handle validation failure
+                    return;
+                }
                 // Get the selected item from the spinner
                 String selectedItem = SpinnerText.getSelectedItem().toString();
 
-                // Validate username and password
-                if (!validateUsername() || !validatePassword()) {
-                    // Handle validation failure
+                // Check if the selected item is "Login as Laundry Owner"
+                if (selectedItem.equals("Login as Laundry Owner")) {
+                    checkLaundryOwner();
                 } else {
-                    // Check if the selected item is "Login as Laundry Owner"
-                    if (selectedItem.equals("Login as Laundry Owner")) {
-                        checkUser();
-                        Intent intent = new Intent(user.this, laundryowner_upload_images_screen.class);
-                        startActivity(intent);
-                    } else {
-                        // Handle login as user
-                        checkLaundryOwner();
-                        Intent intent = new Intent(user.this, user_home_screen.class);
-                        startActivity(intent);
-                    }
+                    checkUser();
                 }
             }
         });
@@ -107,38 +98,33 @@ public class user extends AppCompatActivity {
                 startActivity(intent);
             }
         });
-//        Select Login Option
-
-
-
-
-    }//end of protected void
+    }
 
     public Boolean validateUsername(){
         String val = loginUsername.getText().toString();
         if(val.isEmpty()){
             loginUsername.setError("Username cannot be empty");
-            return  false;
-        }else{
+            return false;
+        } else {
             loginUsername.setError(null);
-            return  true;
+            return true;
         }
     }
+
     public Boolean validatePassword(){
         String val = loginPassword.getText().toString();
         if(val.isEmpty()){
             loginPassword.setError("Password cannot be empty");
-            return  false;
-        }else{
+            return false;
+        } else {
             loginPassword.setError(null);
-            return  true;
+            return true;
         }
     }
 
-    public void checkUser(){
+    public void checkUser() {
         String userUsername = loginUsername.getText().toString().trim();
         String userPassword = loginPassword.getText().toString().trim();
-
 
         DatabaseReference reference = FirebaseDatabase.getInstance().getReference("users");
         Query checkUserDatabase = reference.orderByChild("name").equalTo(userUsername);
@@ -146,24 +132,21 @@ public class user extends AppCompatActivity {
         checkUserDatabase.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if(snapshot.exists())
-                {
+                if(snapshot.exists()) {
                     loginUsername.setError(null);
-                    String passwordFromDb = snapshot.child(userUsername).child("password").getValue(String.class);
+                    DataSnapshot userSnapshot = snapshot.getChildren().iterator().next();
+                    String passwordFromDb = userSnapshot.child("password").getValue(String.class);
 
-                    if(!Objects.equals(passwordFromDb, userUsername))
-                    {
+                    if(Objects.equals(passwordFromDb, userPassword)) {
                         loginUsername.setError(null);
-
-                    }
-                    else
-                    {
+                        // Proceed to the user home screen
+                        Intent intent = new Intent(user.this, user_home_screen.class);
+                        startActivity(intent);
+                    } else {
                         loginPassword.setError("Invalid Credentials!");
                         loginPassword.requestFocus();
                     }
-                }
-                else
-                {
+                } else {
                     loginUsername.setError("User Does Not Exist!");
                     loginUsername.requestFocus();
                 }
@@ -171,40 +154,36 @@ public class user extends AppCompatActivity {
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-
+                // Handle possible errors
             }
         });
     }
-    public void checkLaundryOwner()
-    {
+
+    public void checkLaundryOwner() {
         String laundryOwnerUsername = loginUsername.getText().toString().trim();
         String laundryOwnerPassword = loginPassword.getText().toString().trim();
 
-
         DatabaseReference reference = FirebaseDatabase.getInstance().getReference("LaundryOwner");
-        Query checkUserDatabase = reference.orderByChild("name").equalTo(laundryOwnerUsername);
+        Query checkUserDatabase = reference.orderByChild("username").equalTo(laundryOwnerUsername);
 
         checkUserDatabase.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if(snapshot.exists())
-                {
+                if(snapshot.exists()) {
                     loginUsername.setError(null);
-                    String passwordFromDb = snapshot.child(laundryOwnerUsername).child("password").getValue(String.class);
+                    DataSnapshot userSnapshot = snapshot.getChildren().iterator().next();
+                    String passwordFromDb = userSnapshot.child("password").getValue(String.class);
 
-                    if(!Objects.equals(passwordFromDb, laundryOwnerUsername))
-                    {
+                    if(Objects.equals(passwordFromDb, laundryOwnerPassword)) {
                         loginUsername.setError(null);
-
-                    }
-                    else
-                    {
+                        // Proceed to the laundry owner home screen
+                        Intent intent = new Intent(user.this, laundryowner_upload_images_screen.class);
+                        startActivity(intent);
+                    } else {
                         loginPassword.setError("Invalid Credentials!");
                         loginPassword.requestFocus();
                     }
-                }
-                else
-                {
+                } else {
                     loginUsername.setError("LaundryOwner Does Not Exist!");
                     loginUsername.requestFocus();
                 }
@@ -212,9 +191,8 @@ public class user extends AppCompatActivity {
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-
+                // Handle possible errors
             }
         });
     }
-
-}//end of class
+}

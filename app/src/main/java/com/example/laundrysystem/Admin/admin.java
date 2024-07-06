@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -29,15 +30,14 @@ public class admin extends AppCompatActivity {
     EditText loginUsername, loginPassword;
     Button btn_login;
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.admin);
 
-        btn_user = (Button)findViewById(R.id.btn_user);
-        btn_admin = (Button) findViewById(R.id.btn_admin);
-        btn_login = (Button)findViewById(R.id.btn_login);
+        btn_user = findViewById(R.id.btn_user);
+        btn_admin = findViewById(R.id.btn_admin);
+        btn_login = findViewById(R.id.btn_login);
 
         loginUsername = findViewById(R.id.username);
         loginPassword = findViewById(R.id.password);
@@ -50,85 +50,75 @@ public class admin extends AppCompatActivity {
             }
         });
 
-
-            btn_admin.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    Intent intent = new Intent(admin.this, admin.class);
-                    startActivity(intent);
-                }
-            });
+        btn_admin.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(admin.this, admin.class);
+                startActivity(intent);
+            }
+        });
 
         btn_login.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                if (!validateUsername() | !validatePassword()) {
+                    // Validation failed
 
-                // Validate username and password
-                if (!validateUsername() || !validatePassword())
-                {
-
-                }
-                   else
-                   {
+                    return;
+                } else {
                     // Check if Admin exists
-                        checkAdmin();
-                        Intent intent = new Intent(admin.this, admin_addingform.class);
-                        startActivity(intent);
-                    }
+                    checkAdmin();
+                }
             }
         });
     }
 
-    private Boolean validateUsername(){
+    public Boolean validateUsername() {
         String val = loginUsername.getText().toString();
-        if(val.isEmpty()){
+        if (val.isEmpty()) {
             loginUsername.setError("Username cannot be empty");
-            return  false;
-        }else{
+            return false;
+        } else {
             loginUsername.setError(null);
-            return  true;
-        }
-    }
-    private Boolean validatePassword(){
-        String val = loginPassword.getText().toString();
-        if(val.isEmpty()){
-            loginPassword.setError("Password cannot be empty");
-            return  false;
-        }else{
-            loginPassword.setError(null);
-            return  true;
+            return true;
         }
     }
 
-    private void checkAdmin(){
+    public Boolean validatePassword() {
+        String val = loginPassword.getText().toString();
+        if (val.isEmpty()) {
+            loginPassword.setError("Password cannot be empty");
+            return false;
+        } else {
+            loginPassword.setError(null);
+            return true;
+        }
+    }
+
+    public void checkAdmin() {
         String adminUsername = loginUsername.getText().toString().trim();
         String adminPassword = loginPassword.getText().toString().trim();
 
-
-        DatabaseReference reference = FirebaseDatabase.getInstance().getReference("Admin");
+        DatabaseReference reference = FirebaseDatabase.getInstance().getReference("admin");
         Query checkUserDatabase = reference.orderByChild("username").equalTo(adminUsername);
 
         checkUserDatabase.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if(snapshot.exists())
-                {
-                    loginUsername.setError(null);
-                    String passwordFromDb = snapshot.child(adminUsername).child("password").getValue(String.class);
+                if (snapshot.exists()) {
+                    DataSnapshot userSnapshot = snapshot.getChildren().iterator().next();
+                    String passwordFromDb = userSnapshot.child("password").getValue(String.class);
 
-                    if(!Objects.equals(passwordFromDb, adminUsername))
-                    {
+                    if (Objects.equals(passwordFromDb, adminPassword)) {
                         loginUsername.setError(null);
-
-                    }
-                    else
-                    {
+                        // Proceed to the user home screen
+                        Intent intent = new Intent(admin.this, admin_addingform.class);
+                        startActivity(intent);
+                    } else {
                         loginPassword.setError("Invalid Credentials!");
                         loginPassword.requestFocus();
                     }
-                }
-                else
-                {
+                } else {
                     loginUsername.setError("User Does Not Exist!");
                     loginUsername.requestFocus();
                 }
@@ -136,7 +126,7 @@ public class admin extends AppCompatActivity {
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-
+                Log.e("FirebaseError", error.getMessage());
             }
         });
     }
